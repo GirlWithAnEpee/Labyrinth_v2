@@ -62,7 +62,6 @@ public:
 	int deleteWall(int cell, int pos); //delete current wall of current cell
 	std::vector<cocos2d::Vec2> findNeibs(int strStart, int stlbStart); //returns the next point for the current point
 	void getUnvizited(); //get all unvizited cells
-	bool isVisited(int str, int stlb);//check if the cell is visited
 	bool isWall(int rowStart, int colStart, int rowEnd, int colEnd); //check if there is a wall between cells
 
 	// a selector callback

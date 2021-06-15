@@ -106,47 +106,78 @@ void Labyrinth::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event) {
 		//if Space was pressed
 	case EventKeyboard::KeyCode::KEY_SPACE:
 	{
-		//if the length of the way is too small and we are not on the borderline, so can't get out
-	//	if (length < SIZE + 1 || (strStart != 0 && strStart != SIZE - 1 && stlbStart != 0 && stlbStart != SIZE - 1))
-	//	{
+		//way.push_back(Vec2(strStart, stlbStart));
+		
 		findWay(strStart, stlbStart);
 		labyrinthDN->clear();
+		//startDN->clear();
 		drawCage();
-		vector<Vec2>haveNeibs, vector<Vec2>neibs;
-		for (int i = 0; i < way.size(); i++)
+		getUnvizited();
+		if (unvisited.size() > 0)
 		{
-			neibs = findNeibs(way[i].x, way[i].y);
-			if (neibs.size() > 0)
-				haveNeibs.push_back(way[i]);
+			vector<Vec2>haveNeibs; vector<Vec2>neibs;
+			int row = 0;
+			Vec2 curPoint;
+			if (way.size() == 1)
+			{
+				strStart = way[0].x;
+				stlbStart = way[0].y;
+			}
+			else
+			{
+				for (int i = 0; i < way.size(); i++)
+				{
+					neibs = findNeibs(way[i].x, way[i].y);
+					if (neibs.size() > 0)
+						haveNeibs.push_back(way[i]);
+				}
+
+				way.clear();
+				//choose random new start cell
+				if (haveNeibs.size() == 0)
+				{
+					getUnvizited();
+					row = random(0, static_cast<int>(unvisited.size()) - 1);
+					neibs = findNeibs(unvisited[row].x, unvisited[row].y);
+					curPoint = unvisited[row];
+				}
+				else
+				{
+					row = random(0, static_cast<int>(haveNeibs.size()) - 1);
+					curPoint = haveNeibs[row];
+				}
+
+				strStart = curPoint.x;
+				stlbStart = curPoint.y;
+				gone[strStart][stlbStart] = 1;
+			}
+		neibs = findNeibs(strStart, stlbStart);
+		if (neibs.size() == 1)
+		{
+			goThroughWalls(strStart, stlbStart, neibs[0].x, neibs[0].y);
+			curPoint = neibs[0];
 		}
-		int row = 0;
+		else if (neibs.size() > 1)
+		{
+			row = random(0, static_cast<int>(neibs.size()) - 1);
+			goThroughWalls(strStart, stlbStart, neibs[row].x, neibs[row].y);
+			curPoint = neibs[row];
+		}
+		else
+		{
+			getUnvizited();		
+			row = random(0, static_cast<int>(unvisited.size()) - 1);
+			neibs = findNeibs(unvisited[row].x, unvisited[row].y);
+			curPoint = unvisited[row];
+		}
+		findWay(curPoint.x, curPoint.y);
 
-		//choose random new start cell
-		row = random(0, static_cast<int>(haveNeibs.size()) - 1);
-		strStart = haveNeibs[row].x;
-		stlbStart = borders[row].y;
-
-
-
-
-		//	}
-			//else //if the way was found
-			//{
-			//	way.clear(); //clear the way the find the new one
-			//	unvisited.clear();
-			//	getUnvizited();
-
-			//	if (unvisited.size() > 0)
-			//	{
-			//		//findWay();
-			//	}
-			//	else
-			//	{
-			//		way.clear();
-			//		labyrinthDN->clear();
-			//		drawCage();
-			//	}
-			//}
+		labyrinthDN->clear();
+		//startDN->clear();
+		drawCage();
+		getUnvizited();
+		} 
+		
 		break;
 	}
 	default:
@@ -414,6 +445,7 @@ void Labyrinth::goThroughWalls(int strStart, int stlbStart, int strEnd, int stlb
 //get all unvizited cells
 void Labyrinth::getUnvizited()
 {
+	unvisited.clear();
 	for (int i = 0; i < SIZE; i++)
 	{
 		for (int j = 0; j < SIZE; j++)
@@ -426,23 +458,12 @@ void Labyrinth::getUnvizited()
 	}
 }
 
-bool Labyrinth::isVisited(int str, int stlb)
-{
-	if (gone[str][stlb] == 1)
-		return true;
-	else
-		return false;
-}
-
 //check if there is a wall between cells
 bool Labyrinth::isWall(int rowStart, int colStart, int rowEnd, int colEnd)
 {
 
 	if (rowStart > rowEnd) //go left
 	{
-		log("wall1 is %d", labyrinth.cells[rowStart][colStart] & (1 << 3));
-		log("wall2 is %d", labyrinth.cells[rowEnd][colEnd] & (1 << 1));
-
 		if ((labyrinth.cells[rowStart][colStart] & (1 << 3)) == 0 && (labyrinth.cells[rowEnd][colEnd] & (1 << 1)) == 0)
 			return false;
 		else
@@ -450,9 +471,6 @@ bool Labyrinth::isWall(int rowStart, int colStart, int rowEnd, int colEnd)
 	}
 	else if (rowStart < rowEnd) //go right
 	{
-		log("wall1 is %d", labyrinth.cells[rowStart][colStart] & (1 << 1));
-		log("wall2 is %d", labyrinth.cells[rowEnd][colEnd] & (1 << 3));
-
 		if ((labyrinth.cells[rowStart][colStart] & (1 << 1)) == 0 && (labyrinth.cells[rowEnd][colEnd] & (1 << 3)) == 0)
 			return false;
 		else
@@ -460,9 +478,6 @@ bool Labyrinth::isWall(int rowStart, int colStart, int rowEnd, int colEnd)
 	}
 	else if (colStart > colEnd) //go down
 	{
-		log("wall1 is %d", labyrinth.cells[rowStart][colStart] & (1 << 0));
-		log("wall2 is %d", labyrinth.cells[rowEnd][colEnd] & (1 << 2));
-
 		if ((labyrinth.cells[rowStart][colStart] & (1 << 0)) == 0 && (labyrinth.cells[rowEnd][colEnd] & (1 << 2)) == 0)
 			return false;
 		else
@@ -470,9 +485,6 @@ bool Labyrinth::isWall(int rowStart, int colStart, int rowEnd, int colEnd)
 	}
 	else if (colStart < colEnd) //go up
 	{
-		log("wall1 is %d", labyrinth.cells[rowStart][colStart] & (1 << 2));
-		log("wall2 is %d", labyrinth.cells[rowEnd][colEnd] & (1 << 0));
-
 		if ((labyrinth.cells[rowStart][colStart] & (1 << 2)) == 0 && (labyrinth.cells[rowEnd][colEnd] & (1 << 0)) == 0)
 			return false;
 		else
